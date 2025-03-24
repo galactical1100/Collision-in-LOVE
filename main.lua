@@ -30,6 +30,7 @@ function love.update(dt)
     while dx~=0 or dy~=0 do
         local tiny=1e-10
 
+        -- If the player is attempting to move by an increment greater than their radius, the movement should take place in multiple steps where each step has a maximum magnitude of the radius minus a small number
         local dxIncrement, dyIncrement = math.min(player.r-tiny, dx), math.min(player.r-tiny, dy)
         if dx<0 then
             dxIncrement = math.max(-player.r+tiny, dx)
@@ -38,10 +39,10 @@ function love.update(dt)
             dyIncrement = math.max(-player.r+tiny, dy)
         end
 
-        player.x, player.y = player.x + dxIncrement, player.y + dyIncrement
-        player.x, player.y = wallCollision(player.x, player.y, player.r, walls)
+        player.x, player.y = player.x + dxIncrement, player.y + dyIncrement -- Apply movement
+        player.x, player.y = wallCollision(player.x, player.y, player.r, walls) -- Check for collision with walls
 
-        dx, dy = dx - dxIncrement, dy - dyIncrement
+        dx, dy = dx - dxIncrement, dy - dyIncrement -- Subtract the increment by which the player moved in the last step. If this is less than their radius, dx and dy will be 0 and the loop will complete
     end
 
 end
@@ -62,7 +63,7 @@ function wallCollision(x, y, r, walls)
             local x1,y1=pushCircleOutOfLine(x, y, r, wall[1], wall[2], wall[3], wall[4])
             if x~=x1 or y~=y1 then
                 x, y = x1, y1
-                collided = true
+                loopOverWalls = true -- Loop over all walls again if any collision was detected. This could be optimized I'm sure, but it ensures the player never ends up pushed into one wall by another.
             end
         end
     end
@@ -91,12 +92,13 @@ function pushCircleOutOfLine(cx, cy, radius, x1, y1, x2, y2)
     if dist < radius then
         local push = radius - dist -- This is how far the circle must be pushed out of the line to resolve the collision
         
+        -- Normalize the vector from the closest point to the circle to have a magnitude of 1 so that the direction is stored and we can apply the desired push amount to it later
         local normX = (cx - nx) / dist 
-        local normY = (cy - ny) / dist -- Normalize the vector from the closest point to the circle to have a magnitude of 1 so that the direction is stored and we can apply the desired push amount to it later
+        local normY = (cy - ny) / dist
 
         -- Multipy the normalized x and y vectors by the push amount and add it to the circle's x and y components to move the circle
-        local newCx = cx + normX * push
-        local newCy = cy + normY * push
+        local newCx = normX * push + cx
+        local newCy = normY * push + cy
 
         return newCx, newCy -- Return the new calculated values
     end
